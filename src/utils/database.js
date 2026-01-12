@@ -8,9 +8,14 @@ if (!uri) {
   process.exit(1);
 }
 
-mongoose.connect(uri).then(() => {
-  logger.info('MongoDB connection established');
-}).catch(err => {
-  logger.error('MongoDB connection error', { error: err.message });
-  process.exit(1);
-});
+async function connectDB() {
+  try {
+    await mongoose.connect(uri);
+    logger.info('MongoDB connection established');
+  } catch (err) {
+    logger.error('MongoDB connection error', { error: err.message });
+    throw err;
+  }
+}
+
+module.exports = { connectDB };
