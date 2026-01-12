@@ -53,6 +53,15 @@ module.exports = function startApi(eventBus) {
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '10', 10)
   });
 
+  app.get("/lumi/verify/complete", (req, res) => {
+    res.json({ 
+      status: 'ok',
+      service: 'Verification Webhook',
+      method: 'POST',
+      description: 'Webhook endpoint for verification completion'
+    });
+  });
+
   app.post("/lumi/verify/complete",
     webhookRateLimiter,
     async (req, res) => {
@@ -189,6 +198,15 @@ module.exports = function startApi(eventBus) {
   // Lumi API Routes
   app.use('/lumi/verify', verificationRoutes);
   app.use('/lumi/lookup', lookupRoutes);
+
+  app.get("/lumi/unlink/complete", (req, res) => {
+    res.json({ 
+      status: 'ok',
+      service: 'Unlink Webhook',
+      method: 'POST',
+      description: 'Webhook endpoint for unlink completion'
+    });
+  });
 
   app.post("/lumi/unlink/complete",
     webhookRateLimiter,
