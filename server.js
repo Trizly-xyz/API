@@ -6,7 +6,22 @@ const EventEmitter = require('events');
 
 const PORT = process.env.API_PORT || 3000;
 
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+  logger.error('Uncaught exception', { error: err.message, stack: err.stack });
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('UNHANDLED REJECTION at:', promise, 'reason:', reason);
+  logger.error('Unhandled rejection', { reason: String(reason) });
+  process.exit(1);
+});
+
 async function main() {
+  console.log('🔄 Initializing API Hub...');
+  
   try {
     logger.info('Starting API Hub...');
     
@@ -63,9 +78,14 @@ async function main() {
 
   } catch (error) {
     logger.error('Failed to start API Hub', { error: error.message, stack: error.stack });
-    // Don't exit - let container orchestration handle restart
-    logger.error('ERROR: API Hub startup failed, but server may still be needed. Check logs above.');
+    console.error('\n❌ FATAL ERROR: API Hub failed to start');
+    console.error('Error:', error.message);
+    console.error('\nExiting with code 1...\n');
+    process.exit(1);
   }
 }
 
-main();
+main().catch((err) => {
+  console.error('Unhandled error in main:', err);
+  process.exit(1);
+});
