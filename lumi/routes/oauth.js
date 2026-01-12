@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const axios = require('axios');
 const crypto = require('crypto');
-const logger = require('../src/utils/logger');
+const logger = require('../../src/utils/logger');
 
 const SITE_BASE = (process.env.DOMAIN || 'https://trizly.xyz').replace(/\/$/, '');
 const API_BASE = (process.env.PUBLIC_API_BASE || '').replace(/\/$/, '');
