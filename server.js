@@ -3,8 +3,22 @@ const startApiHub = require('./index');
 const logger = require('./src/utils/logger');
 const { connectDB } = require('./src/utils/database');
 const EventEmitter = require('events');
+const os = require('os');
 
 const PORT = process.env.API_PORT || 3000;
+
+// Get local IP address
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
 
 // Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
@@ -46,9 +60,13 @@ async function main() {
     const app = startApiHub(eventBus);
     
     const server = app.listen(PORT, () => {
+      const localIP = getLocalIP();
       console.log('\n╔═══════════════════════════════════════════════════╗');
       console.log('║           🚀 API Hub Started                      ║');
       console.log('╠═══════════════════════════════════════════════════╣');
+      console.log(`║ Port:   ${PORT}                                        ║`);
+      console.log(`║ IP:     ${localIP}                           ║`);
+      console.log(`║ Access: http://${localIP}:${PORT}            ║`);
       console.log('║ Domain: https://api.trizly.xyz                    ║');
       console.log('╠═══════════════════════════════════════════════════╣');
       console.log('║ Available Endpoints:                              ║');
@@ -63,7 +81,6 @@ async function main() {
       console.log('║ GET  /lumi/lookup/discord/:id - Discord lookup    ║');
       console.log('║ GET  /lumi/lookup/roblox/:id  - Roblox lookup     ║');
       console.log('╚═══════════════════════════════════════════════════╝\n');
-      logger.info(`API Hub listening on port ${PORT}`);
       logger.info('Available APIs: /lumi/*');
     });
 
