@@ -10,7 +10,13 @@ if (!uri) {
 
 async function connectDB() {
   try {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 5000,
+      maxPoolSize: 5,
+      retryWrites: true,
+      w: 'majority'
+    });
     logger.info('MongoDB connection established');
   } catch (err) {
     logger.error('MongoDB connection error', { error: err.message });

@@ -46,7 +46,7 @@ module.exports = function startApi(eventBus) {
 
   app.use(express.json({ limit: '50kb' }));
 
-  const { createRateLimiter } = require('../../src/utils/rateLimit');
+  const { createRateLimiter } = require('../src/utils/rateLimit');
 
   const webhookRateLimiter = createRateLimiter({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10),

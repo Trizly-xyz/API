@@ -10,9 +10,19 @@ async function main() {
   try {
     logger.info('Starting API Hub...');
     
-    // Connect to database
-    await connectDB();
-    logger.info('Database connected');
+    // Connect to database - with timeout
+    try {
+      await Promise.race([
+        connectDB(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('MongoDB connection timeout')), 10000)
+        )
+      ]);
+      logger.info('Database connected');
+    } catch (dbErr) {
+      logger.warn('Database connection failed - continuing anyway', { error: dbErr.message });
+      // Continue anyway - API can still serve some requests
+    }
 
     // Create event bus for inter-service communication
     const eventBus = new EventEmitter();
@@ -36,7 +46,8 @@ async function main() {
 
   } catch (error) {
     logger.error('Failed to start API Hub', { error: error.message, stack: error.stack });
-    process.exit(1);
+    // Don't exit - let container orchestration handle restart
+    logger.error('ERROR: API Hub startup failed, but server may still be needed. Check logs above.');
   }
 }
 
