@@ -1,6 +1,6 @@
-const VerifiedUser = require('../../../src/models/verifiedUser');
-const { getRobloxUserById, resolveRobloxUsername, getRobloxAvatarHeadshot } = require('../../../src/utils/http');
-const logger = require('../../../src/utils/logger');
+const VerifiedUser = require('../../src/models/verifiedUser');
+const { getRobloxUserById, resolveRobloxUsername, getRobloxAvatarHeadshot } = require('../../src/utils/http');
+const logger = require('../../src/utils/logger');
 
 function isSnowflake(id) {
   return /^\d{17,19}$/.test(String(id || ''));
