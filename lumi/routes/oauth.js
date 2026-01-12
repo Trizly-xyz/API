@@ -39,6 +39,17 @@ function buildSuccessRedirect() {
   return `${SITE_BASE}/verify/success`;
 }
 
+router.get('/', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    service: 'Lumi Verification',
+    endpoints: {
+      post_callback: '/lumi/verify/callback',
+      post_roblox: '/lumi/verify/roblox'
+    }
+  });
+});
+
 router.post('/callback', async (req, res) => {
   const { code, state } = req.body || {};
   if (!code) return res.status(400).json({ error: 'Missing Discord OAuth code' });
