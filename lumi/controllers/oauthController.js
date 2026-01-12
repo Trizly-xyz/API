@@ -1,6 +1,6 @@
 const axios = require("axios");
 const crypto = require("crypto");
-const VerificationSession = require("../../../src/models/verificationSession");
+const VerificationSession = require("../src/models/verificationSession");
 
 exports.handleOAuth = async (req, res) => {
   const { code, state } = req.body;

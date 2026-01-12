@@ -2,10 +2,10 @@ const express = require('express');
 const cors = require("cors");
 const verificationRoutes = require('./routes/oauth');
 const lookupRoutes = require('./routes/lookup');
-const { signatureCheck } = require('../../src/utils/security');
+const { signatureCheck } = require('../src/utils/security');
 const crypto = require('crypto');
-const logger = require('../../src/utils/logger');
-const VerifiedUser = require('../../src/models/verifiedUser');
+const logger = require('../src/utils/logger');
+const VerifiedUser = require('../src/models/verifiedUser');
 
 module.exports = function startApi(eventBus) {
   const app = express();
