@@ -73,16 +73,28 @@ module.exports = function startApiHub() {
         requestBody = req.body;
       }
 
+      // Normalize headers: only pass through safe headers for internal proxying
+      const proxyHeaders = {
+        'Content-Type': req.headers['content-type'],
+        'Content-Length': req.headers['content-length'],
+        'X-Verify-Secret': req.headers['x-verify-secret'],
+        'X-Verification-Sig': req.headers['x-verification-sig'],
+        'Authorization': req.headers['authorization'],
+        host: undefined,
+        connection: 'close'
+      };
+      
+      // Remove undefined headers
+      Object.keys(proxyHeaders).forEach(key => 
+        proxyHeaders[key] === undefined && delete proxyHeaders[key]
+      );
+
       // Make proxy request
       axios({
         method: req.method,
         url: targetUrl,
         data: requestBody,
-        headers: {
-          ...req.headers,
-          host: undefined,
-          connection: 'close'
-        },
+        headers: proxyHeaders,
         validateStatus: () => true, // Don't throw on any status
         timeout: 30000 // 30 second timeout
       }).then(response => {

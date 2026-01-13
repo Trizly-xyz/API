@@ -10,20 +10,9 @@ const VerifiedUser = require('../src/models/verifiedUser');
 module.exports = function startApi(eventBus) {
   const app = express();
 
-  const allowedOrigins = [
-    "https://trizly.xyz",
-    "https://www.trizly.xyz",
-    "http://trizly.xyz",
-    "http://www.trizly.xyz",
-    "https://api.trizly.xyz"
-  ];
-
+  // Allow all origins - API Hub is internal gateway
   app.use(cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("Not allowed by CORS"), false);
-    },
+    origin: true,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Verify-Secret", "X-Verification-Sig"],
     credentials: false,
