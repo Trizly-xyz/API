@@ -12,16 +12,48 @@ const SERVICES = {
   // service2: { url: 'http://...', name: '...' }
 };
 
+// Check service health
+async function checkServiceHealth(serviceName, serviceUrl) {
+  try {
+    const response = await axios.get(`${serviceUrl}/health`, { timeout: 5000 });
+    return { status: 'online', lastCheck: new Date().toISOString() };
+  } catch (error) {
+    return { status: 'offline', error: error.message, lastCheck: new Date().toISOString() };
+  }
+}
+
 module.exports = function startApiHub() {
   const app = express();
 
   // Health check for API Hub
-  app.get('/', (req, res) => {
+  app.get('/', async (req, res) => {
+    const serviceHealth = {};
+    
+    for (const [key, service] of Object.entries(SERVICES)) {
+      serviceHealth[key] = await checkServiceHealth(key, service.url);
+    }
+    
     res.json({ 
       status: 'online', 
       service: 'API Hub Gateway', 
       timestamp: new Date().toISOString(),
-      services: Object.keys(SERVICES)
+      services: serviceHealth
+    });
+  });
+
+  // Dedicated health endpoint
+  app.get('/health', async (req, res) => {
+    const serviceHealth = {};
+    
+    for (const [key, service] of Object.entries(SERVICES)) {
+      serviceHealth[key] = await checkServiceHealth(key, service.url);
+    }
+    
+    res.json({ 
+      status: 'online', 
+      service: 'API Hub Gateway', 
+      timestamp: new Date().toISOString(),
+      services: serviceHealth
     });
   });
 
