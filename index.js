@@ -6,7 +6,7 @@ const axios = require('axios');
 const SERVICES = {
   lumi: {
     // Use internal service address to avoid hairpin NAT
-    url: 'http://65.21.16.214:22028',
+    url: 'http://37.27.141.177:22028',
     name: 'Lumi Bot API'
   }
   // Add more services here as needed
