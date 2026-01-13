@@ -25,61 +25,93 @@ async function checkServiceHealth(serviceName, serviceUrl) {
 module.exports = function startApiHub() {
   const app = express();
 
-  // Health check for API Hub
-  app.get('/', async (req, res) => {
-    const serviceHealth = {};
-    
-    for (const [key, service] of Object.entries(SERVICES)) {
-      serviceHealth[key] = await checkServiceHealth(key, service.url);
-    }
-    
+  // Middleware
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Health check for API Hub - quick response without blocking
+  app.get('/', (req, res) => {
     res.json({ 
       status: 'online', 
       service: 'API Hub Gateway', 
       timestamp: new Date().toISOString(),
-      services: serviceHealth
+      uptime: process.uptime()
     });
   });
 
   // Dedicated health endpoint
-  app.get('/health', async (req, res) => {
-    const serviceHealth = {};
-    
-    for (const [key, service] of Object.entries(SERVICES)) {
-      serviceHealth[key] = await checkServiceHealth(key, service.url);
-    }
-    
+  app.get('/health', (req, res) => {
     res.json({ 
       status: 'online', 
       service: 'API Hub Gateway', 
       timestamp: new Date().toISOString(),
-      services: serviceHealth
+      uptime: process.uptime()
     });
   });
 
-  // Proxy all /lumi/* requests to Lumi Bot API
-  app.all('/lumi/*', async (req, res) => {
+  // Proxy /lumi and /lumi/* requests to Lumi Bot API
+  app.all('/lumi', (req, res) => {
+    const targetUrl = `${SERVICES.lumi.url}/`;
+    proxyRequest(req, res, targetUrl);
+  });
+
+  app.all('/lumi/*', (req, res) => {
     const servicePath = req.path.replace('/lumi', '');
     const targetUrl = `${SERVICES.lumi.url}${servicePath}`;
+    proxyRequest(req, res, targetUrl);
+  });
+
+  // Helper function to proxy requests
+  function proxyRequest(req, res, targetUrl) {
     
     try {
-      const response = await axios({
+      // Prepare request body
+      let requestBody = null;
+      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+        requestBody = req.body;
+      }
+
+      // Make proxy request
+      axios({
         method: req.method,
         url: targetUrl,
-        data: req.body,
+        data: requestBody,
         headers: {
           ...req.headers,
-          host: undefined // Remove host header
+          host: undefined,
+          connection: 'close'
         },
-        validateStatus: () => true // Don't throw on any status
+        validateStatus: () => true, // Don't throw on any status
+        timeout: 30000 // 30 second timeout
+      }).then(response => {
+        // Forward response headers (except content-encoding for safety)
+        Object.keys(response.headers).forEach(key => {
+          if (!['content-encoding', 'transfer-encoding'].includes(key.toLowerCase())) {
+            res.set(key, response.headers[key]);
+          }
+        });
+        
+        res.status(response.status);
+        
+        // Send response
+        if (response.data) {
+          if (typeof response.data === 'object') {
+            res.json(response.data);
+          } else {
+            res.send(response.data);
+          }
+        } else {
+          res.end();
+        }
+      }).catch(error => {
+        logger.error('Proxy request failed', { service: 'lumi', error: error.message, url: targetUrl });
+        res.status(502).json({ error: 'Service unavailable', service: 'lumi', message: error.message });
       });
-
-      res.status(response.status).json(response.data);
     } catch (error) {
       logger.error('Proxy error', { service: 'lumi', error: error.message });
       res.status(502).json({ error: 'Service unavailable', service: 'lumi' });
     }
-  });
+  }
 
   // Global error handler
   app.use((err, req, res, next) => {
