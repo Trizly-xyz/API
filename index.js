@@ -57,10 +57,9 @@ module.exports = function startApiHub() {
     proxyRequest(req, res, targetUrl);
   });
 
-  // For /lumi/*, strip the /lumi prefix so /lumi/verify → Lumi /verify
+  // Preserve full path for /lumi/* → forward to Lumi as-is (e.g., /lumi/verify)
   app.all('/lumi/*', (req, res) => {
-    const servicePath = req.path.replace('/lumi', '');
-    const targetUrl = `${SERVICES.lumi.url}${servicePath}`;
+    const targetUrl = `${SERVICES.lumi.url}${req.path}`;
     proxyRequest(req, res, targetUrl);
   });
 
