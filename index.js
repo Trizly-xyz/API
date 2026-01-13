@@ -5,7 +5,8 @@ const axios = require('axios');
 // Service registry - add your services here
 const SERVICES = {
   lumi: {
-    url: process.env.LUMI_API_URL || 'http://37.27.141.177:22028',
+    // Use internal service address by default to avoid hairpin NAT
+    url: process.env.LUMI_API_URL || 'http://172.18.225.1:20942',
     name: 'Lumi Bot API'
   }
   // Add more services here as needed
@@ -24,6 +25,9 @@ async function checkServiceHealth(serviceName, serviceUrl) {
 
 module.exports = function startApiHub() {
   const app = express();
+
+  // Startup diagnostics
+  console.log(`API Hub proxy target (lumi): ${SERVICES.lumi.url}`);
 
   // Middleware
   app.use(express.json());
