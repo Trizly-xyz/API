@@ -1,26 +1,19 @@
 const express = require('express');
 const logger = require('./src/utils/logger');
 const axios = require('axios');
+const http = require('http');
 
-// Service registry - add your services here
+// CRITICAL: Check environment variables
+const LUMI_URL = process.env.LUMI_API_URL || 'http://37.27.141.177:22028';
+console.log(`\n🔗 LUMI_API_URL configured as: ${LUMI_URL}\n`);
+
+// Service registry
 const SERVICES = {
   lumi: {
-    url: process.env.LUMI_API_URL || 'http://37.27.141.177:22028',
+    url: LUMI_URL,
     name: 'Lumi Bot API'
   }
-  // Add more services here as needed
-  // service2: { url: 'http://...', name: '...' }
 };
-
-// Check service health
-async function checkServiceHealth(serviceName, serviceUrl) {
-  try {
-    const response = await axios.get(`${serviceUrl}/health`, { timeout: 5000 });
-    return { status: 'online', lastCheck: new Date().toISOString() };
-  } catch (error) {
-    return { status: 'offline', error: error.message, lastCheck: new Date().toISOString() };
-  }
-}
 
 module.exports = function startApiHub() {
   const app = express();
@@ -51,65 +44,72 @@ module.exports = function startApiHub() {
 
   // Proxy /lumi and /lumi/* requests to Lumi Bot API
   app.all('/lumi', (req, res) => {
-    const targetUrl = `${SERVICES.lumi.url}/`;
-    proxyRequest(req, res, targetUrl);
+    const path = '/';
+    forwardRequest(req, res, path);
   });
 
   app.all('/lumi/*', (req, res) => {
-    const servicePath = req.path.replace('/lumi', '');
-    const targetUrl = `${SERVICES.lumi.url}${servicePath}`;
-    proxyRequest(req, res, targetUrl);
+    const path = req.path.replace('/lumi', '');
+    forwardRequest(req, res, path);
   });
 
-  // Helper function to proxy requests
-  function proxyRequest(req, res, targetUrl) {
-    
-    try {
-      // Prepare request body
-      let requestBody = null;
-      if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
-        requestBody = req.body;
-      }
+  // Forward request to Lumi
+  function forwardRequest(req, res, path) {
+    const lumiUrl = new URL(SERVICES.lumi.url);
+    const options = {
+      hostname: lumiUrl.hostname,
+      port: lumiUrl.port || (lumiUrl.protocol === 'https:' ? 443 : 80),
+      path: path,
+      method: req.method,
+      headers: {
+        ...req.headers,
+        host: lumiUrl.host
+      },
+      timeout: 30000
+    };
 
-      // Make proxy request
-      axios({
-        method: req.method,
-        url: targetUrl,
-        data: requestBody,
-        headers: {
-          ...req.headers,
-          host: undefined,
-          connection: 'close'
-        },
-        validateStatus: () => true, // Don't throw on any status
-        timeout: 30000 // 30 second timeout
-      }).then(response => {
-        // Forward response headers (except content-encoding for safety)
-        Object.keys(response.headers).forEach(key => {
-          if (!['content-encoding', 'transfer-encoding'].includes(key.toLowerCase())) {
-            res.set(key, response.headers[key]);
-          }
+    console.log(`📤 Proxying ${req.method} ${req.path} → ${lumiUrl.protocol}//${options.hostname}:${options.port}${path}`);
+
+    const protocol = lumiUrl.protocol === 'https:' ? require('https') : http;
+    
+    const proxyReq = protocol.request(options, (proxyRes) => {
+      console.log(`📥 Response from Lumi: ${proxyRes.statusCode}`);
+      
+      // Forward status and headers
+      res.writeHead(proxyRes.statusCode, proxyRes.headers);
+      proxyRes.pipe(res);
+    });
+
+    proxyReq.on('error', (error) => {
+      console.error(`❌ Proxy error for ${req.path}:`, error.message);
+      logger.error('Proxy request failed', { path, error: error.message, url: SERVICES.lumi.url });
+      
+      if (!res.headersSent) {
+        res.status(502).json({ 
+          error: 'Service unavailable', 
+          service: 'lumi',
+          tried: SERVICES.lumi.url + path,
+          reason: error.message 
         });
-        
-        res.status(response.status);
-        
-        // Send response
-        if (response.data) {
-          if (typeof response.data === 'object') {
-            res.json(response.data);
-          } else {
-            res.send(response.data);
-          }
-        } else {
-          res.end();
-        }
-      }).catch(error => {
-        logger.error('Proxy request failed', { service: 'lumi', error: error.message, url: targetUrl });
-        res.status(502).json({ error: 'Service unavailable', service: 'lumi', message: error.message });
-      });
-    } catch (error) {
-      logger.error('Proxy error', { service: 'lumi', error: error.message });
-      res.status(502).json({ error: 'Service unavailable', service: 'lumi' });
+      }
+    });
+
+    proxyReq.on('timeout', () => {
+      console.error(`⏱️ Timeout proxying to ${req.path}`);
+      proxyReq.destroy();
+      if (!res.headersSent) {
+        res.status(504).json({ 
+          error: 'Gateway timeout',
+          service: 'lumi'
+        });
+      }
+    });
+
+    // Forward request body if present
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      req.pipe(proxyReq);
+    } else {
+      proxyReq.end();
     }
   }
 
