@@ -40,7 +40,7 @@ async function main() {
     // Start API hub (no database needed - just a proxy)
     const app = startApiHub();
     
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
       const localIP = getLocalIP();
       console.log('\n╔═══════════════════════════════════════════════════╗');
       console.log('║         🚀 API Hub Gateway Started                ║');
