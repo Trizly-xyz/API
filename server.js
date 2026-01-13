@@ -3,7 +3,7 @@ const startApiHub = require('./index');
 const logger = require('./src/utils/logger');
 const os = require('os');
 
-const PORT = process.env.API_PORT || 3000;
+const PORT = process.env.API_PORT || process.env.PORT || 20942;
 
 // Get local IP address
 function getLocalIP() {
