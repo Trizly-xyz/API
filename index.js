@@ -50,14 +50,17 @@ module.exports = function startApiHub() {
     });
   });
 
-  // Proxy /lumi and /lumi/* requests to Lumi Bot API (preserve path)
+  // Proxy /lumi and /lumi/* requests to Lumi Bot API
+  // Map /lumi to Lumi root health (since Lumi has /health at root)
   app.all('/lumi', (req, res) => {
-    const targetUrl = `${SERVICES.lumi.url}/lumi/health`;
+    const targetUrl = `${SERVICES.lumi.url}/health`;
     proxyRequest(req, res, targetUrl);
   });
 
+  // For /lumi/*, strip the /lumi prefix so /lumi/verify → Lumi /verify
   app.all('/lumi/*', (req, res) => {
-    const targetUrl = `${SERVICES.lumi.url}${req.path}`;
+    const servicePath = req.path.replace('/lumi', '');
+    const targetUrl = `${SERVICES.lumi.url}${servicePath}`;
     proxyRequest(req, res, targetUrl);
   });
 
