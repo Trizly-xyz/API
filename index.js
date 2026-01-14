@@ -1,6 +1,7 @@
 const express = require('express');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 const logger = require('./src/utils/logger');
+const oauthRoutes = require('./routes/oauth');
 
 // Service registry - add your services here
 const SERVICES = {
@@ -39,6 +40,9 @@ module.exports = function startApiHub() {
       uptime: process.uptime()
     });
   });
+
+  // OAuth routes (verify and unlink)
+  app.use('/', oauthRoutes);
 
   // This API hub proxies all Lumi traffic. Any Lumi endpoint is reachable here by prefixing it with /lumi.
   app.use('/lumi', createProxyMiddleware({
